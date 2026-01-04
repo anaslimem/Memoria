@@ -50,3 +50,42 @@ impl Vault {
 
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_new_vault() {
+        let vault = Vault::new("Global Vault".to_string(), MemorySize::GB(50));
+        assert_eq!(vault.location, "Global Vault");
+        assert_eq!(vault.storage_capacity, MemorySize::GB(50));
+        assert_eq!(vault.resources.len(), 0);
+    }
+    #[test]
+    fn test_add_resource() {
+        let mut vault = Vault::new("Global Vault".to_string(), MemorySize::GB(50));
+        vault.add(Resource::TextMessage("Hello".to_string()));
+        assert_eq!(vault.resources.len(), 1);
+    }
+    #[test]
+    fn test_get_resource() {
+        let mut vault = Vault::new("Global Vault".to_string(), MemorySize::GB(50));
+        vault.add(Resource::TextMessage("Hello".to_string()));
+        assert_eq!(vault.get(0), Some(&Resource::TextMessage("Hello".to_string())));
+    }
+    #[test]
+    fn test_summary() {
+        let mut vault = Vault::new("Global Vault".to_string(), MemorySize::GB(50));
+        vault.add(Resource::TextMessage("Hello".to_string()));
+        vault.add(Resource::SensorData(24.5));
+        vault.add(Resource::SystemLogs(vec!["Boot successful".to_string(), "Login detected".to_string(), "Error 404".to_string()]));
+        vault.summary();
+    }
+    #[test]
+    fn test_safe_retrieval() {
+        let vault = Vault::new("Test Vault".to_string(), MemorySize::MB(100));
+        // Testing that an empty vault returns None, not a crash!
+        assert_eq!(vault.get(0), None);
+    }
+}
