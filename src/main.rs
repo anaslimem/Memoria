@@ -6,65 +6,43 @@ fn main() {
     println!("Welcome to Memoria!");
 
     loop{
-        println!("\nAvailable Commands: [add] [summary] [get] [exit]");
-        print!(">");
-        io::stdout().flush().unwrap();
-        let mut input = String::new();
-        io::stdin().read_line(&mut input).expect("Failed to read line");
-        let command = input.trim().to_lowercase();
+        let command = prompt("\nAvailable Commands: [add] [summary] [get] [exit]\n> ").to_lowercase();
         match command.as_str(){
             "add" => {
-                println!("What type of resource do you want to add? [text] [sensor] [log]");
-                print!(">");
-                io::stdout().flush().unwrap();
-                let mut resource_type = String::new();
-                io::stdin().read_line(&mut resource_type).expect("Failed to read line");
-                let resource_type = resource_type.trim().to_lowercase();
-                match resource_type.as_str(){
+                let res_type = prompt("What type? [text] [sensor] [log]\n> ");
+                
+                let result = match res_type.to_lowercase().as_str() {
                     "text" => {
-                        println!("Enter text for your message:");
-                        print!(">");
-                        io::stdout().flush().unwrap();
-                        let mut text = String::new();
-                        io::stdin().read_line(&mut text).expect("Failed to read line");
-                        let resource = Resource::TextMessage(text.trim().to_string());
-                        my_vault.add(resource);
+                        let text = prompt("Enter text:\n> ");
+                        my_vault.add(Resource::TextMessage(text))
                     }
                     "sensor" => {
-                        println!("Enter sensor value (e.g. 24.5):");
-                        print!(">");
-                        io::stdout().flush().unwrap();
-                        let mut sensor_data = String::new();
-                        io::stdin().read_line(&mut sensor_data).expect("Failed to read line");
-                        // SAFE PARSING:
-                        if let Ok(val) = sensor_data.trim().parse::<f64>() {
-                            my_vault.add(Resource::SensorData(val));
-                        } else {println!("Warning: Invalid number! Resource not added.");
+                        let val_str = prompt("Enter value:\n> ");
+                        if let Ok(val) = val_str.parse::<f64>() {
+                            my_vault.add(Resource::SensorData(val))
+                        } else {
+                            Err("Invalid number".to_string())
                         }
                     }
                     "log" => {
-                        println!("Enter logs separated by commas (e.g., Boot successful, Login detected, Error 404):");
-                        print!("> ");
-                        io::stdout().flush().unwrap();
-                        let mut logs = String::new();
-                        io::stdin().read_line(&mut logs).expect("Failed to read line");
-                        let logs: Vec<String> = logs.split(',').map(|s| s.trim().to_string()).collect();
-                        let resource = Resource::SystemLogs(logs);
-                        my_vault.add(resource);
+                        let logs_str = prompt("Enter logs (comma separated):\n> ");
+                        let logs = logs_str.split(',').map(|s| s.trim().to_string()).collect();
+                        my_vault.add(Resource::SystemLogs(logs))
                     }
-                    _ => println!("Invalid resource type"),
+                    _ => Err("Invalid type".to_string()),
+                };
+
+                // Handle the Result here!
+                match result {
+                    Ok(_) => println!("Successfully added!"),
+                    Err(e) => println!("Error: {}", e),
                 }
             }
             "summary" => {
                 my_vault.summary();
             }
             "get" => {
-                println!("Enter index of resource:");
-                print!(">");
-                io::stdout().flush().unwrap();
-                let mut index_str = String::new();
-                io::stdin().read_line(&mut index_str).expect("Failed to read line");
-                // SAFE PARSING:
+                let index_str = prompt("Enter index of resource:\n>");
                 if let Ok(index) = index_str.trim().parse::<usize>() {
                     match my_vault.get(index) {
                         Some(resource) => println!("Resource: {:?}", resource),
@@ -78,4 +56,12 @@ fn main() {
             _ => println!("Invalid command"),
         }
     }
+}
+
+fn prompt(message: &str) -> String {
+    print!("{}", message);
+    io::stdout().flush().unwrap();
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).expect("Failed to read line");
+    input.trim().to_string()
 }
