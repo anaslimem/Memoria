@@ -80,7 +80,15 @@ impl Vault {
         println!("Text messages: {}", text_count);
         println!("Sensor data: {}", sensor_count);
         println!("System logs: {}", log_count);
-
+    }
+    pub fn remove(&mut self, index: usize) -> Result<Resource, String>{
+        if index < self.resources.len() {
+            let removed = self.resources.remove(index);
+            println!("Resource removed from vault at {}", self.location);
+            Ok(removed)
+        } else {
+            Err(format!("Index out of bounds: {}", index))
+        }
     }
 }
 
@@ -120,5 +128,15 @@ mod tests {
         let vault = Vault::new("Test Vault".to_string(), MemorySize::MB(100));
         // Testing that an empty vault returns None, not a crash!
         assert_eq!(vault.get(0), None);
+    }
+    #[test]
+    fn test_remove_resource() {
+        let mut vault = Vault::new("Test Vault".to_string(), MemorySize::MB(100));
+        vault.add(Resource::TextMessage("To be deleted".to_string())).unwrap();
+        assert_eq!(vault.resources.len(), 1);
+        
+        let removed = vault.remove(0).unwrap();
+        assert_eq!(vault.resources.len(), 0);
+        assert_eq!(removed, Resource::TextMessage("To be deleted".to_string()));
     }
 }

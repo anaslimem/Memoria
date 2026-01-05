@@ -5,8 +5,16 @@ fn main() {
 
     println!("Welcome to Memoria!");
 
-    loop{
-        let command = prompt("\nAvailable Commands: [add] [summary] [get] [exit]\n> ").to_lowercase();
+    loop {
+        let mut available_commands = String::from("\nAvailable Commands: [add]");
+        
+        if !my_vault.resources.is_empty() {
+            available_commands.push_str(" [summary] [get] [delete]");
+        }
+        
+        available_commands.push_str(" [exit]\n> ");
+
+        let command = prompt(&available_commands).to_lowercase();
         match command.as_str(){
             "add" => {
                 let res_type = prompt("What type? [text] [sensor] [log]\n> ");
@@ -47,6 +55,15 @@ fn main() {
                     match my_vault.get(index) {
                         Some(resource) => println!("Resource: {:?}", resource),
                         None => println!("Warning: No resource found at index {}", index),
+                    }
+                } else {println!("Warning: Please enter a valid whole number for the index.");}
+            }
+            "delete" => {
+                let index_str = prompt("Enter index of resource to delete:\n>");
+                if let Ok(index) = index_str.trim().parse::<usize>() {
+                    match my_vault.remove(index) {
+                        Ok(res) => println!("Resource deleted successfully!{:?}", res),
+                        Err(e) => println!("Error deleting resource: {}", e),
                     }
                 } else {println!("Warning: Please enter a valid whole number for the index.");}
             }
