@@ -15,8 +15,31 @@ pub struct Vault{
     pub storage_capacity: MemorySize,
     pub resources: Vec<Resource>,
 }
+impl MemorySize {
+    // Returns the estimated size of the memory in bytes
+    pub fn size_bytes(&self) -> u64 {
+        match self {
+            MemorySize::KB(kb) => kb * 1024,
+            MemorySize::MB(mb) => mb * 1024 * 1024,
+            MemorySize::GB(gb) => gb * 1024 * 1024 * 1024,
+        }
+    }
+}
+impl Resource {
+    // Returns the estimated size of the resource in bytes
+    pub fn size_bytes(&self) -> u64 {
+        match self {
+            Resource::TextMessage(s) => s.len() as u64,
+            Resource::SensorData(_) => 8, // f64 is 8 bytes
+            Resource::SystemLogs(logs) => logs.iter().map(|log| log.len() as u64).sum(),
+        }
+    }
 
+}
 impl Vault {
+    pub fn current_usage(&self) -> u64 {
+        self.resources.iter().map(|res| res.size_bytes()).sum()
+    }
     pub fn new(location: String, capacity: MemorySize) -> Self{
         println!("Vault created at {} with capacity {:?}", location, capacity);
         Self {
@@ -25,9 +48,19 @@ impl Vault {
             resources: Vec::new(),
         }
     }
-    pub fn add(&mut self, resource: Resource){
+    pub fn add(&mut self, resource: Resource) -> Result<(), String> {
+        let size = resource.size_bytes();
+        let current = self.current_usage();
+        let capacity = self.storage_capacity.size_bytes();
+        if current + size > capacity {
+            return Err(format!(
+                "Vault full! Capacity: {:?}, Current: {} bytes, New Resource: {} bytes",
+                self.storage_capacity, current, size
+            ));
+        }
         self.resources.push(resource);
         println!("Resource added to vault at {}", self.location);
+        Ok(())
     }
     pub fn get(&self, index: usize) -> Option<&Resource>{
         self.resources.get(index)
@@ -65,21 +98,21 @@ mod tests {
     #[test]
     fn test_add_resource() {
         let mut vault = Vault::new("Global Vault".to_string(), MemorySize::GB(50));
-        vault.add(Resource::TextMessage("Hello".to_string()));
+        vault.add(Resource::TextMessage("Hello".to_string())).unwrap();
         assert_eq!(vault.resources.len(), 1);
     }
     #[test]
     fn test_get_resource() {
         let mut vault = Vault::new("Global Vault".to_string(), MemorySize::GB(50));
-        vault.add(Resource::TextMessage("Hello".to_string()));
+        vault.add(Resource::TextMessage("Hello".to_string())).unwrap();
         assert_eq!(vault.get(0), Some(&Resource::TextMessage("Hello".to_string())));
     }
     #[test]
     fn test_summary() {
         let mut vault = Vault::new("Global Vault".to_string(), MemorySize::GB(50));
-        vault.add(Resource::TextMessage("Hello".to_string()));
-        vault.add(Resource::SensorData(24.5));
-        vault.add(Resource::SystemLogs(vec!["Boot successful".to_string(), "Login detected".to_string(), "Error 404".to_string()]));
+        vault.add(Resource::TextMessage("Hello".to_string())).unwrap();
+        vault.add(Resource::SensorData(24.5)).unwrap();
+        vault.add(Resource::SystemLogs(vec!["Boot successful".to_string(), "Login detected".to_string(), "Error 404".to_string()])).unwrap();
         vault.summary();
     }
     #[test]
