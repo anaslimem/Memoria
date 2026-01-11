@@ -1,5 +1,5 @@
-use memoria::{Vault, MemorySize, Resource};
-use std::io::{self, Write};
+use memoria::{Vault, MemorySize, Resource, ui};
+
 fn main() {
     let mut my_vault = Vault::new("Global Vault".to_string(), MemorySize::GB(50));
 
@@ -14,18 +14,18 @@ fn main() {
         
         available_commands.push_str(" [exit]\n> ");
 
-        let command = prompt(&available_commands).to_lowercase();
+        let command = ui::prompt(&available_commands).to_lowercase();
         match command.as_str(){
             "add" => {
-                let res_type = prompt("What type? [text] [sensor] [log]\n> ");
+                let res_type = ui::prompt("What type? [text] [sensor] [log]\n> ");
                 
                 let result = match res_type.to_lowercase().as_str() {
                     "text" => {
-                        let text = prompt("Enter text:\n> ");
+                        let text = ui::prompt("Enter text:\n> ");
                         my_vault.add(Resource::TextMessage(text))
                     }
                     "sensor" => {
-                        let val_str = prompt("Enter value:\n> ");
+                        let val_str = ui::prompt("Enter value:\n> ");
                         if let Ok(val) = val_str.parse::<f64>() {
                             my_vault.add(Resource::SensorData(val))
                         } else {
@@ -33,7 +33,7 @@ fn main() {
                         }
                     }
                     "log" => {
-                        let logs_str = prompt("Enter logs (comma separated):\n> ");
+                        let logs_str = ui::prompt("Enter logs (comma separated):\n> ");
                         let logs = logs_str.split(',').map(|s| s.trim().to_string()).collect();
                         my_vault.add(Resource::SystemLogs(logs))
                     }
@@ -50,7 +50,7 @@ fn main() {
                 my_vault.summary();
             }
             "get" => {
-                let index_str = prompt("Enter index of resource:\n>");
+                let index_str = ui::prompt("Enter index of resource:\n>");
                 if let Ok(index) = index_str.trim().parse::<usize>() {
                     match my_vault.get(index) {
                         Some(resource) => println!("Resource: {:?}", resource),
@@ -59,7 +59,7 @@ fn main() {
                 } else {println!("Warning: Please enter a valid whole number for the index.");}
             }
             "delete" => {
-                let index_str = prompt("Enter index of resource to delete:\n>");
+                let index_str = ui::prompt("Enter index of resource to delete:\n>");
                 if let Ok(index) = index_str.trim().parse::<usize>() {
                     match my_vault.remove(index) {
                         Ok(res) => println!("Resource deleted successfully!{:?}", res),
@@ -73,12 +73,4 @@ fn main() {
             _ => println!("Invalid command"),
         }
     }
-}
-
-fn prompt(message: &str) -> String {
-    print!("{}", message);
-    io::stdout().flush().unwrap();
-    let mut input = String::new();
-    io::stdin().read_line(&mut input).expect("Failed to read line");
-    input.trim().to_string()
 }

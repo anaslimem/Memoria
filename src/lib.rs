@@ -4,7 +4,7 @@ mod memory;
 pub use memory::MemorySize;  
 mod vault;
 pub use vault::Vault;
-
+pub mod ui;
 
 #[cfg(test)]
 mod tests {
