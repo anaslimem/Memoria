@@ -1,15 +1,14 @@
+mod resource;  // Declare the resource module
+pub use resource::Resource;  // Import Resource enum from resource module
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum MemorySize {
     KB(u64),
     MB(u64),
     GB(u64),
 }
-#[derive(Debug, Clone, PartialEq)]
-pub enum Resource {
-    TextMessage(String),
-    SensorData(f64),
-    SystemLogs(Vec<String>),
-}
+
+
 pub struct Vault{
     pub location: String,
     pub storage_capacity: MemorySize,
@@ -25,17 +24,7 @@ impl MemorySize {
         }
     }
 }
-impl Resource {
-    // Returns the estimated size of the resource in bytes
-    pub fn size_bytes(&self) -> u64 {
-        match self {
-            Resource::TextMessage(s) => s.len() as u64,
-            Resource::SensorData(_) => 8, // f64 is 8 bytes
-            Resource::SystemLogs(logs) => logs.iter().map(|log| log.len() as u64).sum(),
-        }
-    }
 
-}
 impl Vault {
     pub fn current_usage(&self) -> u64 {
         self.resources.iter().map(|res| res.size_bytes()).sum()
