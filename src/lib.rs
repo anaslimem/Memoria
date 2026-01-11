@@ -1,28 +1,12 @@
 mod resource;  // Declare the resource module
 pub use resource::Resource;  // Import Resource enum from resource module
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum MemorySize {
-    KB(u64),
-    MB(u64),
-    GB(u64),
-}
-
+mod memory;  
+pub use memory::MemorySize;  
 
 pub struct Vault{
     pub location: String,
     pub storage_capacity: MemorySize,
     pub resources: Vec<Resource>,
-}
-impl MemorySize {
-    // Returns the estimated size of the memory in bytes
-    pub fn size_bytes(&self) -> u64 {
-        match self {
-            MemorySize::KB(kb) => kb * 1024,
-            MemorySize::MB(mb) => mb * 1024 * 1024,
-            MemorySize::GB(gb) => gb * 1024 * 1024 * 1024,
-        }
-    }
 }
 
 impl Vault {
