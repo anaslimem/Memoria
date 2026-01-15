@@ -5,6 +5,8 @@ pub use memory::MemorySize;
 mod vault;
 pub use vault::Vault;
 pub mod ui;
+pub mod error;
+pub use error::VaultError;
 
 #[cfg(test)]
 mod tests {
@@ -20,36 +22,36 @@ mod tests {
     #[test]
     fn test_add_resource() {
         let mut vault = Vault::new("Global Vault".to_string(), MemorySize::GB(50));
-        vault.add(Resource::TextMessage("Hello".to_string())).unwrap();
+        vault.add("greeting".to_string(), Resource::TextMessage("Hello".to_string())).unwrap();
         assert_eq!(vault.resources.len(), 1);
     }
     #[test]
     fn test_get_resource() {
         let mut vault = Vault::new("Global Vault".to_string(), MemorySize::GB(50));
-        vault.add(Resource::TextMessage("Hello".to_string())).unwrap();
-        assert_eq!(vault.get(0), Some(&Resource::TextMessage("Hello".to_string())));
+        vault.add("greeting".to_string(), Resource::TextMessage("Hello".to_string())).unwrap();
+        assert_eq!(vault.get("greeting"), Some(&Resource::TextMessage("Hello".to_string())));
     }
     #[test]
     fn test_summary() {
         let mut vault = Vault::new("Global Vault".to_string(), MemorySize::GB(50));
-        vault.add(Resource::TextMessage("Hello".to_string())).unwrap();
-        vault.add(Resource::SensorData(24.5)).unwrap();
-        vault.add(Resource::SystemLogs(vec!["Boot successful".to_string(), "Login detected".to_string(), "Error 404".to_string()])).unwrap();
+        vault.add("greeting".to_string(), Resource::TextMessage("Hello".to_string())).unwrap();
+        vault.add("temp".to_string(), Resource::SensorData(24.5)).unwrap();
+        vault.add("syslog".to_string(), Resource::SystemLogs(vec!["Boot successful".to_string(), "Login detected".to_string(), "Error 404".to_string()])).unwrap();
         vault.summary();
     }
     #[test]
     fn test_safe_retrieval() {
         let vault = Vault::new("Test Vault".to_string(), MemorySize::MB(100));
-        // Testing that an empty vault returns None, not a crash!
-        assert_eq!(vault.get(0), None);
+        // Testing that a missing key returns None
+        assert_eq!(vault.get("non_existent"), None);
     }
     #[test]
     fn test_remove_resource() {
         let mut vault = Vault::new("Test Vault".to_string(), MemorySize::MB(100));
-        vault.add(Resource::TextMessage("To be deleted".to_string())).unwrap();
+        vault.add("note".to_string(), Resource::TextMessage("To be deleted".to_string())).unwrap();
         assert_eq!(vault.resources.len(), 1);
         
-        let removed = vault.remove(0).unwrap();
+        let removed = vault.remove("note").unwrap();
         assert_eq!(vault.resources.len(), 0);
         assert_eq!(removed, Resource::TextMessage("To be deleted".to_string()));
     }

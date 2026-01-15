@@ -1,46 +1,62 @@
 use crate::resource::Resource;
 use crate::memory::MemorySize;
+use crate::error::VaultError; 
+use std::collections::HashMap;
 
 pub struct Vault{
     pub location: String,
     pub storage_capacity: MemorySize,
-    pub resources: Vec<Resource>,
+    pub resources: HashMap<String, Resource>,
 }
 
 impl Vault {
     pub fn current_usage(&self) -> u64 {
-        self.resources.iter().map(|res| res.size_bytes()).sum()
+        
+        self.resources.values().map(|res| res.size_bytes()).sum()
     }
+    
     pub fn new(location: String, capacity: MemorySize) -> Self{
         println!("Vault created at {} with capacity {:?}", location, capacity);
         Self {
             location,
             storage_capacity: capacity,
-            resources: Vec::new(),
+            resources: HashMap::new(), // Initialize as HashMap
         }
     }
-    pub fn add(&mut self, resource: Resource) -> Result<(), String> {
+    
+    pub fn add(&mut self, key: String, resource: Resource) -> Result<(), VaultError> {
         let size = resource.size_bytes();
         let current = self.current_usage();
         let capacity = self.storage_capacity.size_bytes();
+        
         if current + size > capacity {
-            return Err(format!(
-                "Vault full! Capacity: {:?}, Current: {} bytes, New Resource: {} bytes",
-                self.storage_capacity, current, size
-            ));
+            return Err(VaultError::VaultFull {
+                capacity,
+                current,
+                new_size: size
+            });
         }
-        self.resources.push(resource);
+        
+        if self.resources.contains_key(&key) {
+            return Err(VaultError::InvalidInput(format!("Key '{}' already exists", key)));
+        }
+        
+        self.resources.insert(key, resource);
         println!("Resource added to vault at {}", self.location);
         Ok(())
     }
-    pub fn get(&self, index: usize) -> Option<&Resource>{
-        self.resources.get(index)
+    
+    pub fn get(&self, key: &str) -> Option<&Resource>{
+        self.resources.get(key)
     }
+    
     pub fn summary(&self){
         let mut text_count = 0;
         let mut sensor_count = 0;
         let mut log_count = 0;
-        for res in &self.resources {
+        
+        
+        for res in self.resources.values() {
             match res {
                 Resource::TextMessage(_) => text_count += 1,
                 Resource::SensorData(_) => sensor_count += 1,
@@ -52,13 +68,14 @@ impl Vault {
         println!("Sensor data: {}", sensor_count);
         println!("System logs: {}", log_count);
     }
-    pub fn remove(&mut self, index: usize) -> Result<Resource, String>{
-        if index < self.resources.len() {
-            let removed = self.resources.remove(index);
-            println!("Resource removed from vault at {}", self.location);
-            Ok(removed)
-        } else {
-            Err(format!("Index out of bounds: {}", index))
+    
+    pub fn remove(&mut self, key: &str) -> Result<Resource, VaultError>{
+        match self.resources.remove(key) {
+            Some(removed) => {
+                println!("Resource '{}' removed from vault at {}", key, self.location);
+                Ok(removed)
+            },
+            None => Err(VaultError::ResourceNotFound(key.to_string()))
         }
     }
 }
