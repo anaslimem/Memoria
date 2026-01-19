@@ -1,7 +1,8 @@
 use memoria::{Vault, VaultError, MemorySize, Resource, ui};
 
 fn main() {
-    let mut my_vault = Vault::new("Global Vault".to_string(), MemorySize::GB(50));
+    // Explicitly tell the compiler we want a Vault keyed by String
+    let mut my_vault = Vault::<String>::new("Global Vault".to_string(), MemorySize::GB(50));
 
     println!("Welcome to Memoria!");
 

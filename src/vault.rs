@@ -2,16 +2,18 @@ use crate::resource::Resource;
 use crate::memory::MemorySize;
 use crate::error::VaultError; 
 use std::collections::HashMap;
+use std::hash::Hash;
 
-pub struct Vault{
+pub struct Vault<K>
+where K: Eq + Hash + std::fmt::Display {
     pub location: String,
     pub storage_capacity: MemorySize,
-    pub resources: HashMap<String, Resource>,
+    pub resources: HashMap<K, Resource>,
 }
 
-impl Vault {
+impl<K> Vault<K> 
+where K: Eq + Hash + std::fmt::Display {
     pub fn current_usage(&self) -> u64 {
-        
         self.resources.values().map(|res| res.size_bytes()).sum()
     }
     
@@ -20,11 +22,11 @@ impl Vault {
         Self {
             location,
             storage_capacity: capacity,
-            resources: HashMap::new(), // Initialize as HashMap
+            resources: HashMap::new(), 
         }
     }
     
-    pub fn add(&mut self, key: String, resource: Resource) -> Result<(), VaultError> {
+    pub fn add(&mut self, key: K, resource: Resource) -> Result<(), VaultError> {
         let size = resource.size_bytes();
         let current = self.current_usage();
         let capacity = self.storage_capacity.size_bytes();
@@ -46,7 +48,7 @@ impl Vault {
         Ok(())
     }
     
-    pub fn get(&self, key: &str) -> Option<&Resource>{
+    pub fn get(&self, key: &K) -> Option<&Resource>{
         self.resources.get(key)
     }
     
@@ -54,7 +56,6 @@ impl Vault {
         let mut text_count = 0;
         let mut sensor_count = 0;
         let mut log_count = 0;
-        
         
         for res in self.resources.values() {
             match res {
@@ -69,7 +70,7 @@ impl Vault {
         println!("System logs: {}", log_count);
     }
     
-    pub fn remove(&mut self, key: &str) -> Result<Resource, VaultError>{
+    pub fn remove(&mut self, key: &K) -> Result<Resource, VaultError>{
         match self.resources.remove(key) {
             Some(removed) => {
                 println!("Resource '{}' removed from vault at {}", key, self.location);
