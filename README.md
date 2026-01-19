@@ -4,8 +4,9 @@
 
 ## Features
 
+- **Generic Key Storage**: flexible `Vault<K>` architecture supporting any Hashable key type (String, UUID, Integers).
 - **Key-Value Resource Storage**: Securely manage resources using **HashMaps**, allowing fast retrieval by unique names.
-- **Dynamic Error Handling**: Custom `VaultError` types and fail-safe I/O handling ensuring the system never panics unexpectedly.
+- **Robust Error Handling**: Custom `VaultError` types and fail-safe I/O handling ensuring the system never panics unexpectedly.
 - **Typed Resource Support**: Handle `TextMessage`, `SensorData`, and `SystemLogs` uniformly.
 - **Intelligent Capacity Management**: Automatic size estimation and enforcement of storage limits.
 - **Dynamic CLI Interface**: An interactive, user-friendly terminal interface that adapts commands based on the system state.
@@ -17,11 +18,12 @@ The system follows a clean modular architecture with separation of concerns:
 ### Core Components
 - **`MemorySize`** (`src/memory.rs`): Enum managing storage units (KB, MB, GB) with byte conversion.
 - **`Resource`** (`src/resource.rs`): Core data structure with variant-specific size calculation.
-- **`Vault`** (`src/vault.rs`): Central management struct handling ownership transfer using `HashMap<String, Resource>`.
+- **`Vault<K>`** (`src/vault.rs`): Generic management struct handling ownership transfer using `HashMap<K, Resource>`.
 - **`VaultError`** (`src/error.rs`): Custom error types implementing `std::error::Error` for descriptive failure modes.
 - **`ui`** (`src/ui/`): Terminal interaction utilities with safe `Result`-based input handling.
 
 ### Security & Safety
+- **Generics & Trait Bounds**: The core Vault utilizes `where K: Eq + Hash + Display` to enforce type safety at compile time.
 - **Ownership Transfer**: Resources are moved into the vault, preventing double-free or use-after-move errors.
 - **Reference Safety**: Retrieval methods return `Option<&Resource>`, ensuring memory access is always validated.
 - **Key Uniqueness**: HashMaps ensure that every resource has a unique identifier, preventing duplicate overwrites without checks.
@@ -46,7 +48,7 @@ src/
 
 - **`resource`**: Defines the `Resource` enum with variants for different data types and size calculation logic.
 - **`memory`**: Provides `MemorySize` enum for storage capacity management with byte conversion.
-- **`vault`**: Core `Vault` struct implementing all resource management operations.
+- **`vault`**: Core `Vault<K>` struct implementing generic resource management operations.
 - **`error`**: Defines `VaultError` for handling specific error conditions (Full, NotFound, InvalidInput).
 - **`ui`**: User interface utilities for terminal interaction.
 - **`lib.rs`**: Exports public API (`Vault`, `Resource`, `MemorySize`, `VaultError`, `ui`) for library usage.
@@ -74,13 +76,14 @@ cargo test
 
 ### Using as a Library
 
-Memoria can be used as a library in other Rust projects:
+Memoria can be used as a library in other Rust projects. Notice the use of **Turbofish syntax** to specify the key type!
 
 ```rust
 use memoria::{Vault, MemorySize, Resource};
 
 fn main() {
-    let mut vault = Vault::new("My Vault".to_string(), MemorySize::MB(100));
+    // Explicitly create a Vault using String keys
+    let mut vault = Vault::<String>::new("My Vault".to_string(), MemorySize::MB(100));
     
     // Add resources with a unique key
     vault.add("greeting".to_string(), Resource::TextMessage("Hello".to_string())).unwrap();
