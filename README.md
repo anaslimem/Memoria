@@ -1,5 +1,7 @@
 # Memoria: Typed Resource Manager
 
+[![CI](https://github.com/anaslimem/Memoria/actions/workflows/rust.yml/badge.svg)](https://github.com/anaslimem/Memoria/actions/workflows/rust.yml)
+
 **Memoria** is a production-grade, memory-safe resource management system built in Rust. It demonstrates advanced concepts such as ownership, enums with associated data, safe error handling, and automated testing.
 
 ## Features
@@ -73,6 +75,11 @@ cargo run
 ```bash
 cargo test
 ```
+
+This runs both unit tests (defined in `src/lib.rs`) and integration tests (in `tests/integration_cli.rs`), ensuring the library and CLI functionality work correctly. Tests are automatically run in CI on every push and pull request.
+
+### Continuous Integration
+This project uses GitHub Actions for CI. The workflow (`.github/workflows/rust.yml`) builds and tests the code on Ubuntu with the latest stable Rust toolchain. CI ensures code quality and prevents regressions.
 
 ### Using as a Library
 
