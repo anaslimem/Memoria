@@ -1,121 +1,212 @@
 # Memoria: Typed Resource Manager
 
 [![CI](https://github.com/anaslimem/Memoria/actions/workflows/rust.yml/badge.svg)](https://github.com/anaslimem/Memoria/actions/workflows/rust.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Memoria** is a production-grade, memory-safe resource management system built in Rust. It demonstrates advanced concepts such as ownership, enums with associated data, safe error handling, and automated testing.
+**Memoria** is a production-grade, memory-safe resource management system built in Rust. It provides a generic, type-safe vault for storing and retrieving resources with automatic capacity management, robust error handling, and an interactive CLI interface. Designed to demonstrate advanced Rust concepts like ownership, generics, and safe concurrency patterns.
 
 ## Features
 
-- **Generic Key Storage**: flexible `Vault<K>` architecture supporting any Hashable key type (String, UUID, Integers).
-- **Key-Value Resource Storage**: Securely manage resources using **HashMaps**, allowing fast retrieval by unique names.
-- **Robust Error Handling**: Custom `VaultError` types and fail-safe I/O handling ensuring the system never panics unexpectedly.
-- **Typed Resource Support**: Handle `TextMessage`, `SensorData`, and `SystemLogs` uniformly.
-- **Intelligent Capacity Management**: Automatic size estimation and enforcement of storage limits.
-- **Dynamic CLI Interface**: An interactive, user-friendly terminal interface that adapts commands based on the system state.
+- **Generic Key Storage**: Flexible `Vault<K>` supporting any `Hashable` key type (e.g., `String`, `UUID`, integers).
+- **Typed Resource Variants**: Store `TextMessage`, `SensorData`, and `SystemLogs` with automatic size calculation.
+- **Capacity Management**: Enforce storage limits with byte-accurate tracking and overflow prevention.
+- **Robust Error Handling**: Custom `VaultError` types with descriptive messages, ensuring no panics.
+- **Interactive CLI**: User-friendly terminal interface with dynamic command availability.
+- **Comprehensive Testing**: Unit tests for core logic and integration tests for CLI workflows.
+- **Memory Safety**: Leverages Rust's ownership system to prevent data races and invalid access.
 
-## Technical Architecture
-
-The system follows a clean modular architecture with separation of concerns:
-
-### Core Components
-- **`MemorySize`** (`src/memory.rs`): Enum managing storage units (KB, MB, GB) with byte conversion.
-- **`Resource`** (`src/resource.rs`): Core data structure with variant-specific size calculation.
-- **`Vault<K>`** (`src/vault.rs`): Generic management struct handling ownership transfer using `HashMap<K, Resource>`.
-- **`VaultError`** (`src/error.rs`): Custom error types implementing `std::error::Error` for descriptive failure modes.
-- **`ui`** (`src/ui/`): Terminal interaction utilities with safe `Result`-based input handling.
-
-### Security & Safety
-- **Generics & Trait Bounds**: The core Vault utilizes `where K: Eq + Hash + Display` to enforce type safety at compile time.
-- **Ownership Transfer**: Resources are moved into the vault, preventing double-free or use-after-move errors.
-- **Reference Safety**: Retrieval methods return `Option<&Resource>`, ensuring memory access is always validated.
-- **Key Uniqueness**: HashMaps ensure that every resource has a unique identifier, preventing duplicate overwrites without checks.
-
-## Project Structure
-
-The codebase follows a clean modular architecture:
-
-```
-.
-├── Cargo.toml          # Project configuration and dependencies
-├── LICENSE             # MIT License file
-├── README.md           # This file
-├── src/
-│   ├── lib.rs          # Public API and module declarations
-│   ├── main.rs         # CLI binary application
-│   ├── resource.rs     # Resource enum and implementations
-│   ├── memory.rs       # MemorySize enum and implementations
-│   ├── vault.rs        # Vault struct and core logic
-│   ├── error.rs        # Custom VaultError definitions
-│   └── ui/
-│       └── mod.rs      # User interface utilities
-├── tests/
-│   └── integration_cli.rs  # Integration tests for CLI
-└── .github/
-    └── workflows/
-        └── rust.yml    # GitHub Actions CI configuration
-```
-
-### Module Overview
-
-- **`resource`**: Defines the `Resource` enum with variants for different data types and size calculation logic.
-- **`memory`**: Provides `MemorySize` enum for storage capacity management with byte conversion.
-- **`vault`**: Core `Vault<K>` struct implementing generic resource management operations.
-- **`error`**: Defines `VaultError` for handling specific error conditions (Full, NotFound, InvalidInput).
-- **`ui`**: User interface utilities for terminal interaction.
-- **`lib.rs`**: Exports public API (`Vault`, `Resource`, `MemorySize`, `VaultError`, `ui`) for library usage.
-- **`main.rs`**: Interactive CLI application using the memoria library.
-
-## Installation & Usage
+## Installation
 
 ### Prerequisites
-- [Rust & Cargo](https://www.rust-lang.org/tools/install) (latest stable)
+- [Rust & Cargo](https://www.rust-lang.org/tools/install) (version 1.70+ recommended)
 
-### Build and Run
+### Build from Source
 ```bash
 # Clone the repository
 git clone https://github.com/anaslimem/Memoria.git
 cd Memoria
 
-# Run the interactive CLI
-cargo run
-```
+# Build the project
+cargo build --release
 
-### Running Tests
-```bash
+# Run tests
 cargo test
 ```
 
-This runs both unit tests (defined in `src/lib.rs`) and integration tests (in `tests/integration_cli.rs`), ensuring the library and CLI functionality work correctly. Tests are automatically run in CI on every push and pull request.
+## Usage
 
-### Continuous Integration
-This project uses GitHub Actions for CI. The workflow (`.github/workflows/rust.yml`) builds and tests the code on Ubuntu with the latest stable Rust toolchain. CI ensures code quality and prevents regressions.
+### Command-Line Interface (CLI)
+
+The CLI provides an interactive way to manage resources:
+
+```bash
+cargo run
+```
+
+**Available Commands:**
+- `add`: Create and store a new resource (prompts for type: text, sensor, or log, then key).
+- `summary`: Display vault statistics (counts by resource type).
+- `get`: Retrieve and display a resource by key.
+- `delete`: Remove a resource by key.
+- `exit`: Quit the application.
+
+Example session:
+```
+Welcome to Memoria!
+
+Available Commands: [add] [exit]
+> add
+What type? [text] [sensor] [log]
+> text
+Enter text:
+> Hello, World!
+Enter a unique name (key) for this resource:
+> greeting
+Successfully added!
+
+Available Commands: [add] [summary] [get] [delete] [exit]
+> summary
+Vault summary at Global Vault:
+Text messages: 1
+Sensor data: 0
+System logs: 0
+
+> exit
+```
 
 ### Using as a Library
 
-Memoria can be used as a library in other Rust projects. Notice the use of **Turbofish syntax** to specify the key type!
+Add Memoria to your `Cargo.toml`:
+
+```toml
+[dependencies]
+memoria = { git = "https://github.com/anaslimem/Memoria" }
+```
+
+Basic usage:
 
 ```rust
 use memoria::{Vault, MemorySize, Resource};
 
-fn main() {
-    // Explicitly create a Vault using String keys
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Create a vault with String keys and 100MB capacity
     let mut vault = Vault::<String>::new("My Vault".to_string(), MemorySize::MB(100));
-    
-    // Add resources with a unique key
-    vault.add("greeting".to_string(), Resource::TextMessage("Hello".to_string())).unwrap();
-    vault.add("sensor_1".to_string(), Resource::SensorData(42.5)).unwrap();
-    
+
+    // Add resources
+    vault.add("msg".to_string(), Resource::TextMessage("Hello!".to_string()))?;
+    vault.add("temp".to_string(), Resource::SensorData(23.5))?;
+    vault.add("logs".to_string(), Resource::SystemLogs(vec!["Started".to_string(), "Running".to_string()]))?;
+
+    // Retrieve a resource
+    if let Some(resource) = vault.get(&"msg".to_string()) {
+        println!("Retrieved: {:?}", resource);
+    }
+
+    // Get summary
     vault.summary();
+
+    Ok(())
 }
 ```
 
-## Interactive Commands
+## API Reference
 
-- `add`: Interactive wizard to create and store new resources. You will be asked to provide a unique **name (key)**.
-- `summary`: High-level overview of vault occupancy and resource counts.
-- `get`: Safely retrieve and inspect a resource by its **name (key)**.
-- `delete`: Permanently remove a resource by its **name (key)**.
-- `exit`: Securely close the management session.
+### Core Types
+
+- **`Vault<K>`**: Generic vault struct where `K: Eq + Hash + Display`.
+  - `new(location: String, capacity: MemorySize) -> Vault<K>`
+  - `add(&mut self, key: K, resource: Resource) -> Result<(), VaultError>`
+  - `get(&self, key: &K) -> Option<&Resource>`
+  - `remove(&mut self, key: &K) -> Result<Resource, VaultError>`
+  - `summary(&self)`: Prints resource counts.
+  - `current_usage(&self) -> u64`: Returns bytes used.
+
+- **`Resource`**: Enum for resource types.
+  - `TextMessage(String)`
+  - `SensorData(f64)`
+  - `SystemLogs(Vec<String>)`
+  - `size_bytes(&self) -> u64`: Estimates memory usage.
+
+- **`MemorySize`**: Enum for capacity units.
+  - `KB(u64)`, `MB(u64)`, `GB(u64)`
+  - `size_bytes(&self) -> u64`: Converts to bytes.
+
+- **`VaultError`**: Custom error enum.
+  - `VaultFull { capacity, current, new_size }`
+  - `ResourceNotFound(String)`
+  - `InvalidInput(String)`
+
+### CLI Utilities
+
+- **`ui::prompt(message: &str) -> io::Result<String>`**: Reads user input from stdin.
+
+## Project Structure
+
+```
+.
+├── Cargo.toml              # Project metadata and dependencies
+├── LICENSE                 # MIT License
+├── README.md               # This file
+├── src/
+│   ├── lib.rs              # Library entry point and re-exports
+│   ├── main.rs             # CLI application
+│   ├── resource.rs         # Resource enum and size calculation
+│   ├── memory.rs           # MemorySize enum and conversions
+│   ├── vault.rs            # Vault struct and core operations
+│   ├── error.rs            # Custom error types
+│   └── ui/
+│       └── mod.rs          # CLI input utilities
+├── tests/
+│   └── integration_cli.rs  # End-to-end CLI tests
+└── .github/
+    └── workflows/
+        └── rust.yml        # GitHub Actions CI
+```
+
+## Technical Architecture
+
+### Core Components
+- **`MemorySize`** (`src/memory.rs`): Handles storage units with byte conversion.
+- **`Resource`** (`src/resource.rs`): Defines resource variants with size estimation.
+- **`Vault<K>`** (`src/vault.rs`): Generic container using `HashMap` for storage.
+- **`VaultError`** (`src/error.rs`): Comprehensive error handling.
+- **`ui`** (`src/ui/`): Safe input handling for CLI.
+- **`tests`** (`src/lib.rs`, `tests/integration_cli.rs`): Ensures reliability.
+
+### Design Principles
+- **Type Safety**: Generics prevent runtime type errors.
+- **Ownership & Borrowing**: Resources are moved into the vault, ensuring safety.
+- **Capacity Enforcement**: Prevents overflow with pre-checks.
+- **Error Propagation**: Uses `Result` for all operations.
+- **Modularity**: Clean separation of concerns across modules.
+
+## Testing
+
+Run the full test suite:
+
+```bash
+cargo test --all --all-features
+```
+
+- **Unit Tests** (10 tests in `src/lib.rs`): Cover vault operations, size calculations, and error cases.
+- **Integration Tests** (1 test in `tests/integration_cli.rs`): Validates CLI workflows.
+
+All tests pass, ensuring code quality and preventing regressions.
+
+## Continuous Integration
+
+GitHub Actions runs on every push/PR:
+- Builds with stable Rust.
+- Executes all tests.
+- Ensures cross-platform compatibility (Ubuntu).
+
+## Contributing
+
+1. Fork the repository.
+2. Create a feature branch: `git checkout -b feature-name`.
+3. Make changes and add tests.
+4. Run `cargo test` and `cargo clippy`.
+5. Submit a pull request.
 
 ## License
 
