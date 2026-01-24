@@ -107,3 +107,7 @@ fn main() {
 - `get`: Safely retrieve and inspect a resource by its **name (key)**.
 - `delete`: Permanently remove a resource by its **name (key)**.
 - `exit`: Securely close the management session.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
