@@ -35,15 +35,24 @@ The system follows a clean modular architecture with separation of concerns:
 The codebase follows a clean modular architecture:
 
 ```
-src/
-├── lib.rs          # Public API and module declarations
-├── main.rs         # CLI binary application
-├── resource.rs     # Resource enum and implementations
-├── memory.rs       # MemorySize enum and implementations
-├── vault.rs        # Vault struct and core logic
-├── error.rs        # Custom VaultError definitions
-└── ui/
-    └── mod.rs      # User interface utilities
+.
+├── Cargo.toml          # Project configuration and dependencies
+├── LICENSE             # MIT License file
+├── README.md           # This file
+├── src/
+│   ├── lib.rs          # Public API and module declarations
+│   ├── main.rs         # CLI binary application
+│   ├── resource.rs     # Resource enum and implementations
+│   ├── memory.rs       # MemorySize enum and implementations
+│   ├── vault.rs        # Vault struct and core logic
+│   ├── error.rs        # Custom VaultError definitions
+│   └── ui/
+│       └── mod.rs      # User interface utilities
+├── tests/
+│   └── integration_cli.rs  # Integration tests for CLI
+└── .github/
+    └── workflows/
+        └── rust.yml    # GitHub Actions CI configuration
 ```
 
 ### Module Overview
