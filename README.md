@@ -3,16 +3,17 @@
 [![CI](https://github.com/anaslimem/Memoria/actions/workflows/rust.yml/badge.svg)](https://github.com/anaslimem/Memoria/actions/workflows/rust.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Memoria** is a production-grade, memory-safe resource management system built in Rust. It provides a generic, type-safe vault for storing and retrieving resources with automatic capacity management, robust error handling, and an interactive CLI interface. Designed to demonstrate advanced Rust concepts like ownership, generics, and safe concurrency patterns.
+**Memoria** is a production-grade, memory-safe resource management system built in Rust. It provides a generic, type-safe vault for storing and retrieving resources with automatic capacity management, robust error handling, configurable settings via environment variables, and an interactive CLI interface with colored error output. Designed to demonstrate advanced Rust concepts like ownership, generics, safe concurrency patterns, and I/O operations.
 
 ## Features
 
 - **Generic Key Storage**: Flexible `Vault<K>` supporting any `Hashable` key type (e.g., `String`, `UUID`, integers).
 - **Typed Resource Variants**: Store `TextMessage`, `SensorData`, and `SystemLogs` with automatic size calculation.
 - **Capacity Management**: Enforce storage limits with byte-accurate tracking and overflow prevention.
-- **Robust Error Handling**: Custom `VaultError` types with descriptive messages, ensuring no panics.
-- **Interactive CLI**: User-friendly terminal interface with dynamic command availability.
-- **Comprehensive Testing**: Unit tests for core logic and integration tests for CLI workflows.
+- **Robust Error Handling**: Custom `VaultError` types with descriptive, colored messages on stderr, ensuring no panics.
+- **Environment Configuration**: Configurable vault name and capacity via `.env` file for easy customization.
+- **Interactive CLI**: User-friendly terminal interface with dynamic command availability and realistic error display.
+- **Comprehensive Testing**: Unit tests for core logic and extensive integration tests for CLI workflows.
 - **Memory Safety**: Leverages Rust's ownership system to prevent data races and invalid access.
 
 ## Installation
@@ -33,11 +34,23 @@ cargo build --release
 cargo test
 ```
 
+### Configuration
+Create a `.env` file in the project root to customize settings:
+
+```bash
+# Configuration for Memoria vault
+VAULT_NAME="Global Vault"
+VAULT_CAPACITY_GB=50
+```
+
+- `VAULT_NAME`: Display name for the vault (default: "Default Vault").
+- `VAULT_CAPACITY_GB`: Storage capacity in GB (default: 50).
+
 ## Usage
 
 ### Command-Line Interface (CLI)
 
-The CLI provides an interactive way to manage resources:
+The CLI provides an interactive way to manage resources with configuration loaded from `.env`:
 
 ```bash
 cargo run
@@ -50,9 +63,12 @@ cargo run
 - `delete`: Remove a resource by key.
 - `exit`: Quit the application.
 
+Errors are displayed in red on stderr for better visibility.
+
 Example session:
 ```
-Welcome to Memoria!
+Vault created at Global Vault with capacity GB(50)
+Welcome to Memoria - Global Vault!
 
 Available Commands: [add] [exit]
 > add
@@ -70,6 +86,11 @@ Vault summary at Global Vault:
 Text messages: 1
 Sensor data: 0
 System logs: 0
+
+> get
+Enter name (key) of resource:
+> nonexistent
+Error: Resource 'nonexistent' not found
 
 > exit
 ```
@@ -135,6 +156,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
   - `VaultFull { capacity, current, new_size }`
   - `ResourceNotFound(String)`
   - `InvalidInput(String)`
+  - `print_error(err: &VaultError)`: Prints colored error to stderr.
 
 ### CLI Utilities
 
@@ -144,20 +166,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```
 .
+├── .env                    # Environment configuration (optional)
+├── .env.example            # Example configuration file
 ├── Cargo.toml              # Project metadata and dependencies
 ├── LICENSE                 # MIT License
 ├── README.md               # This file
 ├── src/
 │   ├── lib.rs              # Library entry point and re-exports
-│   ├── main.rs             # CLI application
+│   ├── main.rs             # CLI application with .env loading
 │   ├── resource.rs         # Resource enum and size calculation
 │   ├── memory.rs           # MemorySize enum and conversions
 │   ├── vault.rs            # Vault struct and core operations
-│   ├── error.rs            # Custom error types
+│   ├── error.rs            # Custom error types with colored output
 │   └── ui/
 │       └── mod.rs          # CLI input utilities
 ├── tests/
-│   └── integration_cli.rs  # End-to-end CLI tests
+│   └── integration_cli.rs  # End-to-end CLI tests (5 tests)
 └── .github/
     └── workflows/
         └── rust.yml        # GitHub Actions CI
@@ -169,15 +193,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 - **`MemorySize`** (`src/memory.rs`): Handles storage units with byte conversion.
 - **`Resource`** (`src/resource.rs`): Defines resource variants with size estimation.
 - **`Vault<K>`** (`src/vault.rs`): Generic container using `HashMap` for storage.
-- **`VaultError`** (`src/error.rs`): Comprehensive error handling.
+- **`VaultError`** (`src/error.rs`): Comprehensive error handling with colored terminal output.
 - **`ui`** (`src/ui/`): Safe input handling for CLI.
-- **`tests`** (`src/lib.rs`, `tests/integration_cli.rs`): Ensures reliability.
+- **`.env` Configuration**: Environment-based settings loaded via `dotenv` crate.
+- **`tests`** (`src/lib.rs`, `tests/integration_cli.rs`): Ensures reliability with unit and integration coverage.
 
 ### Design Principles
 - **Type Safety**: Generics prevent runtime type errors.
 - **Ownership & Borrowing**: Resources are moved into the vault, ensuring safety.
 - **Capacity Enforcement**: Prevents overflow with pre-checks.
-- **Error Propagation**: Uses `Result` for all operations.
+- **Error Propagation**: Uses `Result` for all operations, with colored stderr output for CLI.
+- **Configuration**: External `.env` file for easy customization without recompilation.
 - **Modularity**: Clean separation of concerns across modules.
 
 ## Testing
@@ -189,16 +215,17 @@ cargo test --all --all-features
 ```
 
 - **Unit Tests** (10 tests in `src/lib.rs`): Cover vault operations, size calculations, and error cases.
-- **Integration Tests** (1 test in `tests/integration_cli.rs`): Validates CLI workflows.
+- **Integration Tests** (5 tests in `tests/integration_cli.rs`): Validates CLI workflows, including add/get, summary, delete, invalid commands, and duplicate keys.
 
 All tests pass, ensuring code quality and preventing regressions.
 
 ## Continuous Integration
 
-GitHub Actions runs on every push/PR:
-- Builds with stable Rust.
-- Executes all tests.
-- Ensures cross-platform compatibility (Ubuntu).
+GitHub Actions runs on every push/PR with comprehensive checks:
+- **Test Job**: Builds with stable Rust and executes all tests (15 total: 10 unit + 5 integration).
+- **Lint Job**: Checks code formatting with `rustfmt` and runs `clippy` for linting.
+- **Audit Job**: Scans dependencies for security vulnerabilities using `cargo audit`.
+- Ensures cross-platform compatibility (Ubuntu) and prevents regressions.
 
 ## Contributing
 
