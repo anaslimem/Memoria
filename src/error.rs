@@ -1,4 +1,5 @@
 use std::fmt;
+use colored::*; // For colored terminal output
 
 #[derive(Debug)]
 pub enum VaultError{
@@ -17,10 +18,16 @@ impl fmt::Display for VaultError {
             VaultError::VaultFull { capacity, current, new_size } => write!(
                 f,
                 "Vault full! Capacity: {} bytes, Current: {} bytes, New Resource: {} bytes",
-                capacity, current, new_size
+                capacity.to_string().red(),
+                current.to_string().yellow(),
+                new_size.to_string().red()
             ),
             VaultError::ResourceNotFound(key) => write!(f, "Resource '{}' not found", key),
             VaultError::InvalidInput(msg) => write!(f,"Input error: {}", msg)
         }
     }
+}
+
+pub fn print_error(err: &VaultError) {
+    eprintln!("{} {}", "Error:".red().bold(), err);
 }

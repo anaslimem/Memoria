@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-
+dotenv = "0.15"
+colored = "2.0"
 [dev-dependencies]
 assert_cmd = "2.0"
 predicates = "2.1"
