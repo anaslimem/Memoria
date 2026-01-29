@@ -14,21 +14,19 @@ pub enum VaultError {
 
 impl fmt::Display for VaultError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
+        let msg = match self {
             VaultError::VaultFull {
                 capacity,
                 current,
                 new_size,
-            } => write!(
-                f,
+            } => format!(
                 "Vault full! Capacity: {} bytes, Current: {} bytes, New Resource: {} bytes",
-                capacity.to_string().red(),
-                current.to_string().yellow(),
-                new_size.to_string().red()
+                capacity, current, new_size
             ),
-            VaultError::ResourceNotFound(key) => write!(f, "Resource '{}' not found", key),
-            VaultError::InvalidInput(msg) => write!(f, "Input error: {}", msg),
-        }
+            VaultError::ResourceNotFound(key) => format!("Resource '{}' not found", key),
+            VaultError::InvalidInput(msg) => format!("Input error: {}", msg),
+        };
+        write!(f, "{}", msg.red())
     }
 }
 
