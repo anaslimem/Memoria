@@ -7,7 +7,7 @@ fn main() {
     dotenv().ok();
 
     // Read environment variables with defaults
-    let vault_name = env::var("VAULT_NAME").unwrap_or_else(|_| "Default Vault".to_string());
+    let vault_name = env::var("VAULT_NAME").unwrap_or_else(|_| "Global Vault".to_string());
     let capacity_gb: u64 = env::var("VAULT_CAPACITY_GB")
         .unwrap_or_else(|_| "50".to_string())
         .parse()
