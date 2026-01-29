@@ -1,11 +1,11 @@
-mod resource;  // Declare the resource module
-pub use resource::Resource;  // Import Resource enum from resource module
+mod resource; // Declare the resource module
+pub use resource::Resource; // Import Resource enum from resource module
 mod memory;
 pub use memory::MemorySize;
 mod vault;
 pub use vault::Vault;
-pub mod ui;
 pub mod error;
+pub mod ui;
 pub use error::VaultError;
 
 #[cfg(test)]
@@ -26,22 +26,51 @@ mod tests {
     fn test_add_resource() {
         // Inference might work here, but explicit is safer for tests
         let mut vault = Vault::<String>::new("Global Vault".to_string(), MemorySize::GB(50));
-        vault.add("greeting".to_string(), Resource::TextMessage("Hello".to_string())).unwrap();
+        vault
+            .add(
+                "greeting".to_string(),
+                Resource::TextMessage("Hello".to_string()),
+            )
+            .unwrap();
         assert_eq!(vault.resources.len(), 1);
     }
     #[test]
     fn test_get_resource() {
         let mut vault = Vault::<String>::new("Global Vault".to_string(), MemorySize::GB(50));
-        vault.add("greeting".to_string(), Resource::TextMessage("Hello".to_string())).unwrap();
+        vault
+            .add(
+                "greeting".to_string(),
+                Resource::TextMessage("Hello".to_string()),
+            )
+            .unwrap();
         // Since get takes &K, and K is String, we pass &String (or &str that coerces)
-        assert_eq!(vault.get(&"greeting".to_string()), Some(&Resource::TextMessage("Hello".to_string())));
+        assert_eq!(
+            vault.get(&"greeting".to_string()),
+            Some(&Resource::TextMessage("Hello".to_string()))
+        );
     }
     #[test]
     fn test_summary() {
-    let mut vault = Vault::<String>::new("Global Vault".to_string(), MemorySize::GB(50));
-        vault.add("greeting".to_string(), Resource::TextMessage("Hello".to_string())).unwrap();
-        vault.add("temp".to_string(), Resource::SensorData(24.5)).unwrap();
-        vault.add("syslog".to_string(), Resource::SystemLogs(vec!["Boot successful".to_string(), "Login detected".to_string(), "Error 404".to_string()])).unwrap();
+        let mut vault = Vault::<String>::new("Global Vault".to_string(), MemorySize::GB(50));
+        vault
+            .add(
+                "greeting".to_string(),
+                Resource::TextMessage("Hello".to_string()),
+            )
+            .unwrap();
+        vault
+            .add("temp".to_string(), Resource::SensorData(24.5))
+            .unwrap();
+        vault
+            .add(
+                "syslog".to_string(),
+                Resource::SystemLogs(vec![
+                    "Boot successful".to_string(),
+                    "Login detected".to_string(),
+                    "Error 404".to_string(),
+                ]),
+            )
+            .unwrap();
         vault.summary();
     }
     #[test]
@@ -53,7 +82,12 @@ mod tests {
     #[test]
     fn test_remove_resource() {
         let mut vault = Vault::<String>::new("Test Vault".to_string(), MemorySize::MB(100));
-        vault.add("note".to_string(), Resource::TextMessage("To be deleted".to_string())).unwrap();
+        vault
+            .add(
+                "note".to_string(),
+                Resource::TextMessage("To be deleted".to_string()),
+            )
+            .unwrap();
         assert_eq!(vault.resources.len(), 1);
 
         let removed = vault.remove(&"note".to_string()).unwrap();
@@ -65,14 +99,28 @@ mod tests {
         let mut vault = Vault::<String>::new("Overflow Vault".to_string(), MemorySize::KB(1));
         let big_string = "x".repeat(2000); // 2000 bytes
         let res = vault.add("big".to_string(), Resource::TextMessage(big_string));
-        assert!(matches!(res, Err(VaultError::VaultFull{..})), "Expected overflow error");
+        assert!(
+            matches!(res, Err(VaultError::VaultFull { .. })),
+            "Expected overflow error"
+        );
     }
     #[test]
     fn test_duplicate_key() {
         let mut vault = Vault::<String>::new("Dup Vault".to_string(), MemorySize::GB(1));
-        vault.add("dup".to_string(), Resource::TextMessage("first".to_string())).unwrap();
-        let res = vault.add("dup".to_string(), Resource::TextMessage("second".to_string()));
-        assert!(matches!(res, Err(VaultError::InvalidInput(_))), "Expected duplicate key error");
+        vault
+            .add(
+                "dup".to_string(),
+                Resource::TextMessage("first".to_string()),
+            )
+            .unwrap();
+        let res = vault.add(
+            "dup".to_string(),
+            Resource::TextMessage("second".to_string()),
+        );
+        assert!(
+            matches!(res, Err(VaultError::InvalidInput(_))),
+            "Expected duplicate key error"
+        );
     }
     #[test]
     fn test_memorysize_bytes() {

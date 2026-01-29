@@ -1,5 +1,5 @@
-use memoria::{Vault, VaultError, MemorySize, Resource, ui, error};
 use dotenv::dotenv;
+use memoria::{error, ui, MemorySize, Resource, Vault, VaultError};
 use std::env;
 
 fn main() {
@@ -20,17 +20,20 @@ fn main() {
 
     loop {
         let mut available_commands = String::from("\nAvailable Commands: [add]");
-        
+
         if !my_vault.resources.is_empty() {
             available_commands.push_str(" [summary] [get] [delete]");
         }
-        
+
         available_commands.push_str(" [exit]\n> ");
 
         let command = match ui::prompt(&available_commands) {
             Ok(cmd) => cmd.to_lowercase(),
             Err(e) => {
-                error::print_error(&VaultError::InvalidInput(format!("Error reading input: {}", e)));
+                error::print_error(&VaultError::InvalidInput(format!(
+                    "Error reading input: {}",
+                    e
+                )));
                 continue;
             }
         };
@@ -53,46 +56,42 @@ fn handle_add(vault: &mut Vault<String>) {
     };
 
     let resource_result = match res_type.to_lowercase().as_str() {
-        "text" => {
-            match ui::prompt("Enter text:\n> ") {
-                Ok(text) => Ok(Resource::TextMessage(text)),
-                Err(e) => Err(format!("Error reading text: {}", e)),
+        "text" => match ui::prompt("Enter text:\n> ") {
+            Ok(text) => Ok(Resource::TextMessage(text)),
+            Err(e) => Err(format!("Error reading text: {}", e)),
+        },
+        "sensor" => match ui::prompt("Enter value:\n> ") {
+            Ok(val_str) => match val_str.parse::<f64>() {
+                Ok(val) => Ok(Resource::SensorData(val)),
+                Err(_) => Err("Invalid number".to_string()),
+            },
+            Err(e) => Err(format!("Error reading value: {}", e)),
+        },
+        "log" => match ui::prompt("Enter logs (comma separated):\n> ") {
+            Ok(logs_str) => {
+                let logs = logs_str.split(',').map(|s| s.trim().to_string()).collect();
+                Ok(Resource::SystemLogs(logs))
             }
-        }
-        "sensor" => {
-            match ui::prompt("Enter value:\n> ") {
-                Ok(val_str) => match val_str.parse::<f64>() {
-                    Ok(val) => Ok(Resource::SensorData(val)),
-                    Err(_) => Err("Invalid number".to_string()),
-                },
-                Err(e) => Err(format!("Error reading value: {}", e)),
-            }
-        }
-        "log" => {
-            match ui::prompt("Enter logs (comma separated):\n> ") {
-                Ok(logs_str) => {
-                    let logs = logs_str.split(',').map(|s| s.trim().to_string()).collect();
-                    Ok(Resource::SystemLogs(logs))
-                }
-                Err(e) => Err(format!("Error reading logs: {}", e)),
-            }
-        }
+            Err(e) => Err(format!("Error reading logs: {}", e)),
+        },
         _ => Err("Invalid type".to_string()),
     };
 
     match resource_result {
-        Ok(resource) => {
-            match ui::prompt("Enter a unique name (key) for this resource:\n> ") {
-                Ok(key) => {
-                    match vault.add(key, resource) {
-                        Ok(_) => println!("Successfully added!"),
-                        Err(e) => error::print_error(&e),
-                    }
-                }
-                Err(e) => error::print_error(&VaultError::InvalidInput(format!("Error reading key: {}", e))),
-            }
-        }
-        Err(e) => error::print_error(&VaultError::InvalidInput(format!("Error creating resource: {}", e))),
+        Ok(resource) => match ui::prompt("Enter a unique name (key) for this resource:\n> ") {
+            Ok(key) => match vault.add(key, resource) {
+                Ok(_) => println!("Successfully added!"),
+                Err(e) => error::print_error(&e),
+            },
+            Err(e) => error::print_error(&VaultError::InvalidInput(format!(
+                "Error reading key: {}",
+                e
+            ))),
+        },
+        Err(e) => error::print_error(&VaultError::InvalidInput(format!(
+            "Error creating resource: {}",
+            e
+        ))),
     }
 }
 
