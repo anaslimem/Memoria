@@ -1,5 +1,5 @@
-mod resource; // Declare the resource module
-pub use resource::Resource; // Import Resource enum from resource module
+mod resource;
+pub use resource::Resource;
 mod memory;
 pub use memory::MemorySize;
 mod vault;
@@ -12,19 +12,16 @@ pub use error::VaultError;
 mod tests {
     use super::*;
 
-    // Test that creating a new Vault initializes fields correctly.
     #[test]
     fn test_new_vault() {
-        // We explicitly tell it to be a Vault
         let vault = Vault::<String>::new("Global Vault".to_string(), MemorySize::GB(50));
         assert_eq!(vault.location, "Global Vault");
         assert_eq!(vault.storage_capacity, MemorySize::GB(50));
         assert_eq!(vault.resources.len(), 0);
     }
-    // Test adding a resource to the vault and ensuring it is stored.
+
     #[test]
     fn test_add_resource() {
-        // Inference might work here, but explicit is safer for tests
         let mut vault = Vault::<String>::new("Global Vault".to_string(), MemorySize::GB(50));
         vault
             .add(
@@ -34,6 +31,7 @@ mod tests {
             .unwrap();
         assert_eq!(vault.resources.len(), 1);
     }
+
     #[test]
     fn test_get_resource() {
         let mut vault = Vault::<String>::new("Global Vault".to_string(), MemorySize::GB(50));
@@ -43,12 +41,12 @@ mod tests {
                 Resource::TextMessage("Hello".to_string()),
             )
             .unwrap();
-        // Since get takes &K, and K is String, we pass &String (or &str that coerces)
         assert_eq!(
             vault.get(&"greeting".to_string()),
             Some(&Resource::TextMessage("Hello".to_string()))
         );
     }
+
     #[test]
     fn test_summary() {
         let mut vault = Vault::<String>::new("Global Vault".to_string(), MemorySize::GB(50));
@@ -73,12 +71,13 @@ mod tests {
             .unwrap();
         vault.summary();
     }
+
     #[test]
     fn test_safe_retrieval() {
         let vault = Vault::<String>::new("Test Vault".to_string(), MemorySize::MB(100));
-        // Testing that a missing key returns None
         assert_eq!(vault.get(&"non_existent".to_string()), None);
     }
+
     #[test]
     fn test_remove_resource() {
         let mut vault = Vault::<String>::new("Test Vault".to_string(), MemorySize::MB(100));
@@ -94,6 +93,7 @@ mod tests {
         assert_eq!(vault.resources.len(), 0);
         assert_eq!(removed, Resource::TextMessage("To be deleted".to_string()));
     }
+
     #[test]
     fn test_overflow() {
         let mut vault = Vault::<String>::new("Overflow Vault".to_string(), MemorySize::KB(1));
@@ -104,6 +104,7 @@ mod tests {
             "Expected overflow error"
         );
     }
+
     #[test]
     fn test_duplicate_key() {
         let mut vault = Vault::<String>::new("Dup Vault".to_string(), MemorySize::GB(1));
@@ -122,12 +123,14 @@ mod tests {
             "Expected duplicate key error"
         );
     }
+
     #[test]
     fn test_memorysize_bytes() {
         assert_eq!(MemorySize::KB(1).size_bytes(), 1024);
         assert_eq!(MemorySize::MB(1).size_bytes(), 1024 * 1024);
         assert_eq!(MemorySize::GB(1).size_bytes(), 1024 * 1024 * 1024);
     }
+
     #[test]
     fn test_resource_size_bytes() {
         let text = Resource::TextMessage("abc".to_string());
@@ -135,6 +138,6 @@ mod tests {
         let sensor = Resource::SensorData(42.0);
         assert_eq!(sensor.size_bytes(), 8);
         let logs = Resource::SystemLogs(vec!["log1".to_string(), "log2".to_string()]);
-        assert_eq!(logs.size_bytes(), 8); // 4 + 4
+        assert_eq!(logs.size_bytes(), 8);
     }
 }

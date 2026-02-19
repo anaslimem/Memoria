@@ -10,6 +10,7 @@ pub enum VaultError {
     },
     ResourceNotFound(String),
     InvalidInput(String),
+    IoError(std::io::Error),
 }
 
 impl fmt::Display for VaultError {
@@ -25,11 +26,16 @@ impl fmt::Display for VaultError {
             ),
             VaultError::ResourceNotFound(key) => format!("Resource '{}' not found", key),
             VaultError::InvalidInput(msg) => format!("Input error: {}", msg),
+            VaultError::IoError(e) => format!("I/O error: {}", e),
         };
         write!(f, "{}", msg.red())
     }
 }
 
-pub fn print_error(err: &VaultError) {
-    eprintln!("{} {}", "Error:".red().bold(), err);
+impl std::error::Error for VaultError {}
+
+impl From<std::io::Error> for VaultError {
+    fn from(err: std::io::Error) -> Self {
+        VaultError::IoError(err)
+    }
 }

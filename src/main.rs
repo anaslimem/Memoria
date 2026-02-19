@@ -1,8 +1,10 @@
+use colored::Colorize;
 use dotenv::dotenv;
-use memoria::{error, ui, MemorySize, Resource, Vault, VaultError};
+use memoria::{ui, MemorySize, Resource, Vault, VaultError};
 use std::env;
+use std::error::Error;
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     // Load environment variables from .env file
     dotenv().ok();
 
@@ -27,88 +29,85 @@ fn main() {
 
         available_commands.push_str(" [exit]\n> ");
 
-        let command = match ui::prompt(&available_commands) {
-            Ok(cmd) => cmd.to_lowercase(),
-            Err(e) => {
-                error::print_error(&VaultError::InvalidInput(format!(
-                    "Error reading input: {}",
-                    e
-                )));
-                continue;
-            }
-        };
+        // We wrap the logic in a closure that returns a Result<bool>
+        // the bool indicates if we should continue the loop
+        let result: Result<bool, Box<dyn Error>> = (|| {
+            let command = ui::prompt(&available_commands)?.to_lowercase();
 
-        match command.as_str() {
-            "add" => handle_add(&mut my_vault),
-            "summary" => my_vault.summary(),
-            "get" => handle_get(&my_vault),
-            "delete" => handle_delete(&mut my_vault),
-            "exit" => break,
-            _ => error::print_error(&VaultError::InvalidInput("Invalid command".to_string())),
+            match command.as_str() {
+                "add" => {
+                    handle_add(&mut my_vault)?;
+                    Ok(true)
+                }
+                "summary" => {
+                    my_vault.summary();
+                    Ok(true)
+                }
+                "get" => {
+                    handle_get(&my_vault)?;
+                    Ok(true)
+                }
+                "delete" => {
+                    handle_delete(&mut my_vault)?;
+                    Ok(true)
+                }
+                "exit" => Ok(false),
+                _ => Err(VaultError::InvalidInput("Invalid command".to_string()).into()),
+            }
+        })();
+
+        match result {
+            Ok(true) => continue,
+            Ok(false) => break,
+            Err(e) => eprintln!("{} {}", "Error:".red().bold(), e),
         }
     }
+
+    Ok(())
 }
 
-fn handle_add(vault: &mut Vault<String>) {
-    let res_type = match ui::prompt("What type? [text] [sensor] [log]\n> ") {
-        Ok(t) => t,
-        Err(_) => return,
+fn handle_add(vault: &mut Vault<String>) -> Result<(), Box<dyn Error>> {
+    let res_type = ui::prompt("What type? [text] [sensor] [log]\n> ")?;
+
+    let resource = match res_type.to_lowercase().as_str() {
+        "text" => {
+            let text = ui::prompt("Enter text:\n> ")?;
+            Resource::TextMessage(text)
+        }
+        "sensor" => {
+            let val_str = ui::prompt("Enter value:\n> ")?;
+            let val = val_str
+                .parse::<f64>()
+                .map_err(|_| VaultError::InvalidInput("Invalid number".to_string()))?;
+            Resource::SensorData(val)
+        }
+        "log" => {
+            let logs_str = ui::prompt("Enter logs (comma separated):\n> ")?;
+            let logs = logs_str.split(',').map(|s| s.trim().to_string()).collect();
+            Resource::SystemLogs(logs)
+        }
+        _ => return Err(VaultError::InvalidInput("Invalid type".to_string()).into()),
     };
 
-    let resource_result = match res_type.to_lowercase().as_str() {
-        "text" => match ui::prompt("Enter text:\n> ") {
-            Ok(text) => Ok(Resource::TextMessage(text)),
-            Err(e) => Err(format!("Error reading text: {}", e)),
-        },
-        "sensor" => match ui::prompt("Enter value:\n> ") {
-            Ok(val_str) => match val_str.parse::<f64>() {
-                Ok(val) => Ok(Resource::SensorData(val)),
-                Err(_) => Err("Invalid number".to_string()),
-            },
-            Err(e) => Err(format!("Error reading value: {}", e)),
-        },
-        "log" => match ui::prompt("Enter logs (comma separated):\n> ") {
-            Ok(logs_str) => {
-                let logs = logs_str.split(',').map(|s| s.trim().to_string()).collect();
-                Ok(Resource::SystemLogs(logs))
-            }
-            Err(e) => Err(format!("Error reading logs: {}", e)),
-        },
-        _ => Err("Invalid type".to_string()),
-    };
+    let key = ui::prompt("Enter a unique name (key) for this resource:\n> ")?;
+    vault.add(key, resource)?;
+    println!("Successfully added!");
 
-    match resource_result {
-        Ok(resource) => match ui::prompt("Enter a unique name (key) for this resource:\n> ") {
-            Ok(key) => match vault.add(key, resource) {
-                Ok(_) => println!("Successfully added!"),
-                Err(e) => error::print_error(&e),
-            },
-            Err(e) => error::print_error(&VaultError::InvalidInput(format!(
-                "Error reading key: {}",
-                e
-            ))),
-        },
-        Err(e) => error::print_error(&VaultError::InvalidInput(format!(
-            "Error creating resource: {}",
-            e
-        ))),
-    }
+    Ok(())
 }
 
-fn handle_get(vault: &Vault<String>) {
-    if let Ok(key) = ui::prompt("Enter name (key) of resource:\n> ") {
-        match vault.get(&key) {
-            Some(resource) => println!("Resource: {:?}", resource),
-            None => error::print_error(&VaultError::ResourceNotFound(key)),
-        }
+fn handle_get(vault: &Vault<String>) -> Result<(), Box<dyn Error>> {
+    let key = ui::prompt("Enter name (key) of resource:\n> ")?;
+    match vault.get(&key) {
+        Some(resource) => println!("Resource: {:?}", resource),
+        None => return Err(VaultError::ResourceNotFound(key).into()),
     }
+    Ok(())
 }
 
-fn handle_delete(vault: &mut Vault<String>) {
-    if let Ok(key) = ui::prompt("Enter name (key) of resource to delete:\n> ") {
-        match vault.remove(&key) {
-            Ok(res) => println!("Resource deleted successfully! {:?}", res),
-            Err(e) => error::print_error(&e),
-        }
-    }
+fn handle_delete(vault: &mut Vault<String>) -> Result<(), Box<dyn Error>> {
+    let key = ui::prompt("Enter name (key) of resource to delete:\n> ")?;
+    let res = vault.remove(&key)?;
+    println!("Resource deleted successfully! {:?}", res);
+    Ok(())
 }
