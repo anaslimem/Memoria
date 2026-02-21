@@ -3,7 +3,7 @@ pub use resource::Resource;
 mod memory;
 pub use memory::MemorySize;
 mod vault;
-pub use vault::Vault;
+pub use vault::{Vault, VaultMetadata};
 pub mod error;
 pub mod ui;
 pub use error::VaultError;
@@ -139,5 +139,42 @@ mod tests {
         assert_eq!(sensor.size_bytes(), 8);
         let logs = Resource::SystemLogs(vec!["log1".to_string(), "log2".to_string()]);
         assert_eq!(logs.size_bytes(), 8);
+    }
+
+    #[test]
+    fn test_resource_serialization() {
+        use serde_json;
+        
+        let text = Resource::TextMessage("Hello World".to_string());
+        let json = serde_json::to_string(&text).unwrap();
+        let deserialized: Resource = serde_json::from_str(&json).unwrap();
+        assert_eq!(text, deserialized);
+    }
+
+    #[test]
+    fn test_memorysize_serialization() {
+        use serde_json;
+        
+        let size = MemorySize::MB(512);
+        let json = serde_json::to_string(&size).unwrap();
+        let deserialized: MemorySize = serde_json::from_str(&json).unwrap();
+        assert_eq!(size, deserialized);
+    }
+
+    #[test]
+    fn test_vault_metadata_serialization() {
+        use serde_json;
+        use vault::VaultMetadata;
+        
+        let metadata = VaultMetadata {
+            location: "Test Vault".to_string(),
+            storage_capacity: MemorySize::GB(10),
+            current_usage: 5_000_000,
+            resource_count: 42,
+        };
+        
+        let json = serde_json::to_string(&metadata).unwrap();
+        let deserialized: VaultMetadata = serde_json::from_str(&json).unwrap();
+        assert_eq!(metadata, deserialized);
     }
 }

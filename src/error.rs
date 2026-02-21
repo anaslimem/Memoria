@@ -1,7 +1,8 @@
 use colored::*;
+use serde::{Deserialize, Serialize};
 use std::fmt; // For colored terminal output
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum VaultError {
     VaultFull {
         capacity: u64,
@@ -10,6 +11,7 @@ pub enum VaultError {
     },
     ResourceNotFound(String),
     InvalidInput(String),
+    #[serde(skip)]
     IoError(std::io::Error),
 }
 

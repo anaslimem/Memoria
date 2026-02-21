@@ -1,8 +1,17 @@
 use crate::error::VaultError;
 use crate::memory::MemorySize;
 use crate::resource::Resource;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::hash::Hash;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VaultMetadata {
+    pub location: String,
+    pub storage_capacity: MemorySize,
+    pub current_usage: u64,
+    pub resource_count: usize,
+}
 
 pub struct Vault<K>
 where
