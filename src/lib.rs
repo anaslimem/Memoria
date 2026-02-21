@@ -177,4 +177,51 @@ mod tests {
         let deserialized: VaultMetadata = serde_json::from_str(&json).unwrap();
         assert_eq!(metadata, deserialized);
     }
+
+    #[test]
+    fn test_vault_save_to_file() {
+        let mut vault = Vault::<String>::new("Save Test".to_string(), MemorySize::MB(100));
+        vault
+            .add(
+                "test_key".to_string(),
+                Resource::TextMessage("test data".to_string()),
+            )
+            .unwrap();
+
+        let temp_file = "/tmp/test_vault.json";
+        vault.save_to_file(temp_file).unwrap();
+
+        // Verify file exists and can be read
+        assert!(std::path::Path::new(temp_file).exists());
+        let _ = std::fs::remove_file(temp_file);
+    }
+
+    #[test]
+    fn test_vault_load_from_file() {
+        // Create and save a vault
+        let mut original = Vault::<String>::new("Load Test".to_string(), MemorySize::MB(200));
+        original
+            .add(
+                "key1".to_string(),
+                Resource::TextMessage("hello".to_string()),
+            )
+            .unwrap();
+        original
+            .add("key2".to_string(), Resource::SensorData(42.5))
+            .unwrap();
+
+        let temp_file = "/tmp/test_vault_load.json";
+        original.save_to_file(temp_file).unwrap();
+
+        // Load and verify
+        let loaded: Vault<String> = Vault::load_from_file(temp_file).unwrap();
+        assert_eq!(loaded.location, "Load Test");
+        assert_eq!(loaded.resources.len(), 2);
+        assert_eq!(
+            loaded.get(&"key1".to_string()),
+            Some(&Resource::TextMessage("hello".to_string()))
+        );
+
+        let _ = std::fs::remove_file(temp_file);
+    }
 }

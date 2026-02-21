@@ -3,6 +3,7 @@ use crate::memory::MemorySize;
 use crate::resource::Resource;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fs;
 use std::hash::Hash;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -11,6 +12,14 @@ pub struct VaultMetadata {
     pub storage_capacity: MemorySize,
     pub current_usage: u64,
     pub resource_count: usize,
+}
+
+// Helper struct for serialization (only used internally)
+#[derive(Serialize, Deserialize)]
+struct VaultSnapshot<K: Clone + Eq + std::hash::Hash + Serialize> {
+    location: String,
+    storage_capacity: MemorySize,
+    resources: HashMap<K, Resource>,
 }
 
 pub struct Vault<K>
@@ -24,7 +33,8 @@ where
 
 impl<K> Vault<K>
 where
-    K: Eq + Hash + std::fmt::Display,
+    K: Eq + Hash + std::fmt::Display + Clone + serde::Serialize,
+    for<'de> K: serde::Deserialize<'de>,
 {
     pub fn current_usage(&self) -> u64 {
         self.resources.values().map(|res| res.size_bytes()).sum()
@@ -90,5 +100,42 @@ where
             Some(removed) => Ok(removed),
             None => Err(VaultError::ResourceNotFound(key.to_string())),
         }
+    }
+
+    pub fn save_to_file(&self, path: &str) -> Result<(), VaultError> {
+        let snapshot = VaultSnapshot {
+            location: self.location.clone(),
+            storage_capacity: self.storage_capacity.clone(),
+            resources: self.resources.clone(),
+        };
+
+        let json = serde_json::to_string_pretty(&snapshot).map_err(|e| {
+            VaultError::IoError(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                e.to_string(),
+            ))
+        })?;
+
+        fs::write(path, json)?;
+        Ok(())
+    }
+
+    pub fn load_from_file(path: &str) -> Result<Self, VaultError>
+    where
+        K: for<'de> serde::Deserialize<'de>,
+    {
+        let json = fs::read_to_string(path)?;
+        let snapshot: VaultSnapshot<K> = serde_json::from_str(&json).map_err(|e| {
+            VaultError::IoError(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                e.to_string(),
+            ))
+        })?;
+
+        Ok(Self {
+            location: snapshot.location,
+            storage_capacity: snapshot.storage_capacity,
+            resources: snapshot.resources,
+        })
     }
 }

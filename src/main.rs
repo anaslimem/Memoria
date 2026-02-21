@@ -8,6 +8,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Load environment variables from .env file
     dotenv().ok();
 
+    // Check for command line arguments
+    let args: Vec<String> = env::args().collect();
+    let should_persist = args.contains(&"--save".to_string());
+    let vault_file = ".memoria/vault.json";
+
     // Read environment variables with defaults
     let vault_name = env::var("VAULT_NAME").unwrap_or_else(|_| "Global Vault".to_string());
     let capacity_gb: u64 = env::var("VAULT_CAPACITY_GB")
@@ -15,8 +20,23 @@ fn main() -> Result<(), Box<dyn Error>> {
         .parse()
         .unwrap_or(50);
 
-    // Create the vault with configurable name and capacity
-    let mut my_vault = Vault::<String>::new(vault_name.clone(), MemorySize::GB(capacity_gb));
+    // Try to load existing vault if persisting is enabled
+    let mut my_vault = if should_persist && std::path::Path::new(vault_file).exists() {
+        println!("Loading vault from {}...", vault_file);
+        match Vault::<String>::load_from_file(vault_file) {
+            Ok(vault) => {
+                println!("✓ Vault loaded successfully!",);
+                vault
+            }
+            Err(_) => {
+                println!("Creating new vault...");
+                Vault::<String>::new(vault_name.clone(), MemorySize::GB(capacity_gb))
+            }
+        }
+    } else {
+        // Create the vault with configurable name and capacity
+        Vault::<String>::new(vault_name.clone(), MemorySize::GB(capacity_gb))
+    };
 
     println!("Welcome to Memoria - {}!", vault_name);
 
@@ -60,6 +80,15 @@ fn main() -> Result<(), Box<dyn Error>> {
             Ok(true) => continue,
             Ok(false) => break,
             Err(e) => eprintln!("{} {}", "Error:".red().bold(), e),
+        }
+    }
+
+    // Save vault on exit if persistence is enabled
+    if should_persist {
+        std::fs::create_dir_all(".memoria").ok();
+        match my_vault.save_to_file(vault_file) {
+            Ok(_) => println!("✓ Vault saved to {}", vault_file),
+            Err(e) => eprintln!("⚠ Failed to save vault: {}", e),
         }
     }
 

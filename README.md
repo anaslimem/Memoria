@@ -1,239 +1,238 @@
-# Memoria: Typed Resource Manager
+# Memoria
 
 [![CI](https://github.com/anaslimem/Memoria/actions/workflows/rust.yml/badge.svg)](https://github.com/anaslimem/Memoria/actions/workflows/rust.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Memoria** is a production-grade, memory-safe resource management system built in Rust. It provides a generic, type-safe vault for storing and retrieving resources with automatic capacity management, robust error handling, configurable settings via environment variables, and an interactive CLI interface with colored error output. Designed to demonstrate advanced Rust concepts like ownership, generics, safe concurrency patterns, and I/O operations.
+**Memoria** is a fast, safe, and flexible memory storage system built in Rust. Store different types of data (messages, sensor readings, logs), manage storage capacity automatically, and persist your data between sessions—all without crashes or data loss.
 
-## Features
+Perfect for learning advanced Rust patterns or as a foundation for agent memory systems.
 
-- **Generic Key Storage**: Flexible `Vault<K>` supporting any `Hashable` key type (e.g., `String`, `UUID`, integers).
-- **Typed Resource Variants**: Store `TextMessage`, `SensorData`, and `SystemLogs` with automatic size calculation.
-- **Capacity Management**: Enforce storage limits with byte-accurate tracking and overflow prevention.
-- **Robust Error Handling**: Custom `VaultError` types with descriptive, colored messages on stderr, ensuring no panics.
-- **Environment Configuration**: Configurable vault name and capacity via `.env` file for easy customization.
-- **Interactive CLI**: User-friendly terminal interface with dynamic command availability and realistic error display.
-- **Comprehensive Testing**: Unit tests for core logic and extensive integration tests for CLI workflows.
-- **Memory Safety**: Leverages Rust's ownership system to prevent data races and invalid access.
+## What Can You Do?
 
-## Installation
+- Store anything - Text, numbers, logs with a single unified interface
+- Save and load - Your data persists between sessions (with `--save` flag)
+- Safe by default - Type-safe, memory-safe, no panics
+- Capacity aware - Automatic storage limit enforcement
+- Configurable - Set vault name and size via `.env`
+- Interactive CLI - Beautiful, colored terminal interface
+- Just works - Comprehensive tests ensure reliability
 
-### Prerequisites
-- [Rust & Cargo](https://www.rust-lang.org/tools/install) (version 1.70+ recommended)
+## Quick Start
 
-### Build from Source
+### Build and Run
 ```bash
-# Clone the repository
 git clone https://github.com/anaslimem/Memoria.git
 cd Memoria
-
-# Build the project
 cargo build --release
-
-# Run tests
-cargo test
-```
-
-### Configuration
-Create a `.env` file in the project root to customize settings:
-
-```bash
-# Configuration for Memoria vault
-VAULT_NAME="Global Vault"
-VAULT_CAPACITY_GB=50
-```
-
-- `VAULT_NAME`: Display name for the vault (default: "Default Vault").
-- `VAULT_CAPACITY_GB`: Storage capacity in GB (default: 50).
-
-## Usage
-
-### Command-Line Interface (CLI)
-
-The CLI provides an interactive way to manage resources with configuration loaded from `.env`:
-
-```bash
 cargo run
 ```
 
-**Available Commands:**
-- `add`: Create and store a new resource (prompts for type: text, sensor, or log, then key).
-- `summary`: Display vault statistics (counts by resource type).
-- `get`: Retrieve and display a resource by key.
-- `delete`: Remove a resource by key.
-- `exit`: Quit the application.
-
-Errors are displayed in red on stderr for better visibility.
-
-Example session:
+### With Data Persistence
+```bash
+cargo run -- --save
 ```
-Vault created at Global Vault with capacity GB(50)
-Welcome to Memoria - Global Vault!
+
+This saves your vault to `.memoria/vault.json` on exit and loads it on restart.
+
+### Configuration (.env)
+```env
+VAULT_NAME="My Memory"
+VAULT_CAPACITY_GB=50
+```
+
+## Interactive CLI Demo
+
+```
+Welcome to Memoria - My Memory!
 
 Available Commands: [add] [exit]
 > add
 What type? [text] [sensor] [log]
 > text
 Enter text:
-> Hello, World!
+> Remember this important thing
 Enter a unique name (key) for this resource:
-> greeting
-Successfully added!
+> important
+✓ Successfully added!
 
 Available Commands: [add] [summary] [get] [delete] [exit]
 > summary
-Vault summary at Global Vault:
+Vault summary at My Memory:
 Text messages: 1
 Sensor data: 0
 System logs: 0
 
-> get
-Enter name (key) of resource:
-> nonexistent
-Error: Resource 'nonexistent' not found
-
 > exit
+✓ Vault saved to .memoria/vault.json
 ```
 
-### Using as a Library
-
-Add Memoria to your `Cargo.toml`:
+## Use as a Library
 
 ```toml
 [dependencies]
 memoria = { git = "https://github.com/anaslimem/Memoria" }
 ```
 
-Basic usage:
-
 ```rust
 use memoria::{Vault, MemorySize, Resource};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Create a vault with String keys and 100MB capacity
     let mut vault = Vault::<String>::new("My Vault".to_string(), MemorySize::MB(100));
-
-    // Add resources
-    vault.add("msg".to_string(), Resource::TextMessage("Hello!".to_string()))?;
+    
+    vault.add("note".to_string(), Resource::TextMessage("Hello!".to_string()))?;
     vault.add("temp".to_string(), Resource::SensorData(23.5))?;
-    vault.add("logs".to_string(), Resource::SystemLogs(vec!["Started".to_string(), "Running".to_string()]))?;
-
-    // Retrieve a resource
-    if let Some(resource) = vault.get(&"msg".to_string()) {
-        println!("Retrieved: {:?}", resource);
+    vault.add("logs".to_string(), Resource::SystemLogs(vec!["Log 1".to_string()]))?;
+    
+    if let Some(resource) = vault.get(&"note".to_string()) {
+        println!("Found: {:?}", resource);
     }
-
-    // Get summary
-    vault.summary();
-
+    
+    // Persist to file
+    vault.save_to_file("backup.json")?;
+    
     Ok(())
 }
 ```
 
-## API Reference
+## Core API
 
-### Core Types
+### Vault<K>
+```rust
+Vault::new(location, capacity) -> Vault<K>
+vault.add(key, resource) -> Result<()>         // Store a resource
+vault.get(&key) -> Option<&Resource>           // Retrieve by key
+vault.remove(&key) -> Result<Resource>         // Delete and return
+vault.summary()                                 // Display stats
+vault.save_to_file(path) -> Result<()>        // Persist to JSON
+Vault::load_from_file(path) -> Result<Vault>  // Load from JSON
+```
 
-- **`Vault<K>`**: Generic vault struct where `K: Eq + Hash + Display`.
-  - `new(location: String, capacity: MemorySize) -> Vault<K>`
-  - `add(&mut self, key: K, resource: Resource) -> Result<(), VaultError>`
-  - `get(&self, key: &K) -> Option<&Resource>`
-  - `remove(&mut self, key: &K) -> Result<Resource, VaultError>`
-  - `summary(&self)`: Prints resource counts.
-  - `current_usage(&self) -> u64`: Returns bytes used.
+### Resource Types
+```rust
+Resource::TextMessage(String)           // Any text
+Resource::SensorData(f64)               // Numeric data
+Resource::SystemLogs(Vec<String>)       // Multiple log entries
+```
 
-- **`Resource`**: Enum for resource types.
-  - `TextMessage(String)`
-  - `SensorData(f64)`
-  - `SystemLogs(Vec<String>)`
-  - `size_bytes(&self) -> u64`: Estimates memory usage.
-
-- **`MemorySize`**: Enum for capacity units.
-  - `KB(u64)`, `MB(u64)`, `GB(u64)`
-  - `size_bytes(&self) -> u64`: Converts to bytes.
-
-- **`VaultError`**: Custom error enum.
-  - `VaultFull { capacity, current, new_size }`
-  - `ResourceNotFound(String)`
-  - `InvalidInput(String)`
-  - `print_error(err: &VaultError)`: Prints colored error to stderr.
-
-### CLI Utilities
-
-- **`ui::prompt(message: &str) -> io::Result<String>`**: Reads user input from stdin.
+### Memory Units
+```rust
+MemorySize::KB(u64)    // Kilobytes
+MemorySize::MB(u64)    // Megabytes
+MemorySize::GB(u64)    // Gigabytes
+```
 
 ## Project Structure
 
 ```
 .
-├── .env                    # Environment configuration (optional)
-├── .env.example            # Example configuration file
-├── Cargo.toml              # Project metadata and dependencies
-├── LICENSE                 # MIT License
-├── README.md               # This file
 ├── src/
-│   ├── lib.rs              # Library entry point and re-exports
-│   ├── main.rs             # CLI application with .env loading
-│   ├── resource.rs         # Resource enum and size calculation
-│   ├── memory.rs           # MemorySize enum and conversions
-│   ├── vault.rs            # Vault struct and core operations
-│   ├── error.rs            # Custom error types with colored output
-│   └── ui/
-│       └── mod.rs          # CLI input utilities
+│   ├── lib.rs              // Library root
+│   ├── main.rs             // Interactive CLI
+│   ├── vault.rs            // Core vault logic + persistence
+│   ├── resource.rs         // Resource types (serializable)
+│   ├── memory.rs           // Memory size helpers (serializable)
+│   ├── error.rs            // Error types (serializable)
+│   └── ui/mod.rs           // CLI prompt utilities
 ├── tests/
-│   └── integration_cli.rs  # End-to-end CLI tests (5 tests)
-└── .github/
-    └── workflows/
-        └── rust.yml        # GitHub Actions CI
+│   └── integration_cli.rs   // E2E CLI tests
+├── Cargo.toml              // Dependencies
+├── .env.example            // Config template
+└── README.md               // This file
 ```
 
-## Technical Architecture
+## Features
 
-### Core Components
-- **`MemorySize`** (`src/memory.rs`): Handles storage units with byte conversion.
-- **`Resource`** (`src/resource.rs`): Defines resource variants with size estimation.
-- **`Vault<K>`** (`src/vault.rs`): Generic container using `HashMap` for storage.
-- **`VaultError`** (`src/error.rs`): Comprehensive error handling with colored terminal output.
-- **`ui`** (`src/ui/`): Safe input handling for CLI.
-- **`.env` Configuration**: Environment-based settings loaded via `dotenv` crate.
-- **`tests`** (`src/lib.rs`, `tests/integration_cli.rs`): Ensures reliability with unit and integration coverage.
+### Storage and Capacity
+- Generic Vault<K> works with any hashable key type
+- Byte-accurate capacity tracking
+- Automatic overflow prevention with helpful errors
 
-### Design Principles
-- **Type Safety**: Generics prevent runtime type errors.
-- **Ownership & Borrowing**: Resources are moved into the vault, ensuring safety.
-- **Capacity Enforcement**: Prevents overflow with pre-checks.
-- **Error Propagation**: Uses `Result` for all operations, with colored stderr output for CLI.
-- **Configuration**: External `.env` file for easy customization without recompilation.
-- **Modularity**: Clean separation of concerns across modules.
+### Serialization and Persistence
+- All core types are serde-compatible (JSON support)
+- Save entire vault to file with save_to_file()
+- Load vault from file with load_from_file()
+- Auto-save on exit with --save flag
+
+### Error Handling
+- Custom VaultError type for all operations
+- Colored error output on terminal (red text)
+- No panics—all errors are recoverable
+
+### Testing
+- 20 tests total (15 unit + 5 integration)
+  - Vault operations (add, get, remove, summary)
+  - Serialization round-trips
+  - File I/O and persistence
 
 ## Testing
 
-Run the full test suite:
+Run all tests:
 
 ```bash
 cargo test --all --all-features
 ```
 
-- **Unit Tests** (10 tests in `src/lib.rs`): Cover vault operations, size calculations, and error cases.
-- **Integration Tests** (5 tests in `tests/integration_cli.rs`): Validates CLI workflows, including add/get, summary, delete, invalid commands, and duplicate keys.
+Run with output:
 
-All tests pass, ensuring code quality and preventing regressions.
+```bash
+cargo test -- --nocapture
+```
+
+Run specific test:
+
+```bash
+cargo test test_vault_load_from_file -- --nocapture
+```
+
+## Linting and Formatting
+
+Check code quality:
+
+```bash
+cargo fmt --all -- --check
+cargo clippy
+```
+
+Auto-format code:
+
+```bash
+cargo fmt --all
+```
+
+## Design Principles
+
+- Type Safety: Generics prevent runtime type errors
+- Ownership and Borrowing: Resources are moved into the vault, ensuring safety
+- Capacity Enforcement: Prevents overflow with pre-checks
+- Error Propagation: Uses Result for all operations
+- Modularity: Clean separation of concerns across modules
+- Testability: Comprehensive test coverage for reliability
+
+## Dependencies
+
+- serde (1.0) - Serialization framework
+- serde_json (1.0) - JSON support
+- colored (2.0) - Terminal colors
+- dotenv (0.15) - Environment configuration
+- assert_cmd (2.0) - CLI testing
+- predicates (2.1) - Test assertions
 
 ## Continuous Integration
 
-GitHub Actions runs on every push/PR with comprehensive checks:
-- **Test Job**: Builds with stable Rust and executes all tests (15 total: 10 unit + 5 integration).
-- **Lint Job**: Checks code formatting with `rustfmt` and runs `clippy` for linting.
-- **Audit Job**: Scans dependencies for security vulnerabilities using `cargo audit`.
-- Ensures cross-platform compatibility (Ubuntu) and prevents regressions.
+GitHub Actions runs on every push with:
+- Build and test on stable Rust
+- Code formatting checks
+- Linting with clippy
+- Security audit with cargo audit
 
 ## Contributing
 
-1. Fork the repository.
-2. Create a feature branch: `git checkout -b feature-name`.
-3. Make changes and add tests.
-4. Run `cargo test` and `cargo clippy`.
-5. Submit a pull request.
+1. Fork the repository
+2. Create a feature branch: git checkout -b feature-name
+3. Make changes and add tests
+4. Run cargo test and cargo clippy
+5. Submit a pull request
+
 
 ## License
 
