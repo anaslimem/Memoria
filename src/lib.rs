@@ -144,7 +144,7 @@ mod tests {
     #[test]
     fn test_resource_serialization() {
         use serde_json;
-        
+
         let text = Resource::TextMessage("Hello World".to_string());
         let json = serde_json::to_string(&text).unwrap();
         let deserialized: Resource = serde_json::from_str(&json).unwrap();
@@ -154,7 +154,7 @@ mod tests {
     #[test]
     fn test_memorysize_serialization() {
         use serde_json;
-        
+
         let size = MemorySize::MB(512);
         let json = serde_json::to_string(&size).unwrap();
         let deserialized: MemorySize = serde_json::from_str(&json).unwrap();
@@ -165,14 +165,14 @@ mod tests {
     fn test_vault_metadata_serialization() {
         use serde_json;
         use vault::VaultMetadata;
-        
+
         let metadata = VaultMetadata {
             location: "Test Vault".to_string(),
             storage_capacity: MemorySize::GB(10),
             current_usage: 5_000_000,
             resource_count: 42,
         };
-        
+
         let json = serde_json::to_string(&metadata).unwrap();
         let deserialized: VaultMetadata = serde_json::from_str(&json).unwrap();
         assert_eq!(metadata, deserialized);

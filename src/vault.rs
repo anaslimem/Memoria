@@ -87,9 +87,7 @@ where
 
     pub fn remove(&mut self, key: &K) -> Result<Resource, VaultError> {
         match self.resources.remove(key) {
-            Some(removed) => {
-                Ok(removed)
-            }
+            Some(removed) => Ok(removed),
             None => Err(VaultError::ResourceNotFound(key.to_string())),
         }
     }

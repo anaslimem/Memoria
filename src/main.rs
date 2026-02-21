@@ -76,9 +76,9 @@ fn handle_add(vault: &mut Vault<String>) -> Result<(), Box<dyn Error>> {
         }
         "sensor" => {
             let val_str = ui::prompt("Enter value:\n> ")?;
-            let val = val_str.parse::<f64>().map_err(|_| {
-                VaultError::InvalidInput("Invalid number".to_string())
-            })?;
+            let val = val_str
+                .parse::<f64>()
+                .map_err(|_| VaultError::InvalidInput("Invalid number".to_string()))?;
             Resource::SensorData(val)
         }
         "log" => {
