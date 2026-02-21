@@ -51,7 +51,6 @@ where
         }
 
         self.resources.insert(key, resource);
-        println!("Resource added to vault at {}", self.location);
         Ok(())
     }
 
@@ -80,7 +79,6 @@ where
     pub fn remove(&mut self, key: &K) -> Result<Resource, VaultError> {
         match self.resources.remove(key) {
             Some(removed) => {
-                println!("Resource '{}' removed from vault at {}", key, self.location);
                 Ok(removed)
             }
             None => Err(VaultError::ResourceNotFound(key.to_string())),

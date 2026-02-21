@@ -76,9 +76,9 @@ fn handle_add(vault: &mut Vault<String>) -> Result<(), Box<dyn Error>> {
         }
         "sensor" => {
             let val_str = ui::prompt("Enter value:\n> ")?;
-            let val = val_str
-                .parse::<f64>()
-                .map_err(|_| VaultError::InvalidInput("Invalid number".to_string()))?;
+            let val = val_str.parse::<f64>().map_err(|_| {
+                VaultError::InvalidInput("Invalid number".to_string())
+            })?;
             Resource::SensorData(val)
         }
         "log" => {
@@ -86,12 +86,14 @@ fn handle_add(vault: &mut Vault<String>) -> Result<(), Box<dyn Error>> {
             let logs = logs_str.split(',').map(|s| s.trim().to_string()).collect();
             Resource::SystemLogs(logs)
         }
-        _ => return Err(VaultError::InvalidInput("Invalid type".to_string()).into()),
+        _ => {
+            return Err(VaultError::InvalidInput("Invalid type".to_string()).into());
+        }
     };
 
     let key = ui::prompt("Enter a unique name (key) for this resource:\n> ")?;
     vault.add(key, resource)?;
-    println!("Successfully added!");
+    println!("{}", "✓ Successfully added!".green().bold());
 
     Ok(())
 }
@@ -99,8 +101,13 @@ fn handle_add(vault: &mut Vault<String>) -> Result<(), Box<dyn Error>> {
 fn handle_get(vault: &Vault<String>) -> Result<(), Box<dyn Error>> {
     let key = ui::prompt("Enter name (key) of resource:\n> ")?;
     match vault.get(&key) {
-        Some(resource) => println!("Resource: {:?}", resource),
-        None => return Err(VaultError::ResourceNotFound(key).into()),
+        Some(resource) => {
+            println!("{}", "✓ Resource found!".green().bold());
+            println!("Resource: {:?}", resource);
+        }
+        None => {
+            return Err(VaultError::ResourceNotFound(key).into());
+        }
     }
     Ok(())
 }
@@ -108,6 +115,7 @@ fn handle_get(vault: &Vault<String>) -> Result<(), Box<dyn Error>> {
 fn handle_delete(vault: &mut Vault<String>) -> Result<(), Box<dyn Error>> {
     let key = ui::prompt("Enter name (key) of resource to delete:\n> ")?;
     let res = vault.remove(&key)?;
-    println!("Resource deleted successfully! {:?}", res);
+    println!("{}", "✓ Resource deleted successfully!".green().bold());
+    println!("Deleted: {:?}", res);
     Ok(())
 }
